@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>1:1 심리 상담 채팅</title>
+  <title>1:1 법률 상담 채팅</title>
   <style>
     * {
       margin: 0;
@@ -270,10 +270,10 @@
   <div class="chat-container">
     <div class="chat-header">
       <div class="header-info">
-        <div class="avatar">🧠</div>
+        <div class="avatar">⚖️</div>
         <div class="header-text">
-          <h2>AI 심리 상담사</h2>
-          <p>언제든지 편하게 이야기해주세요</p>
+          <h2>AI 법률 상담사</h2>
+          <p>법률 관련 질문을 편하게 해주세요</p>
         </div>
       </div>
       <button class="reset-btn" onclick="resetChat()">대화 초기화</button>
@@ -281,14 +281,14 @@
 
     <div class="messages" id="messages">
       <div class="welcome-message">
-        <div class="icon">💬</div>
-        <h3>안녕하세요, 상담사입니다</h3>
-        <p>오늘 어떤 이야기를 나눠볼까요?<br>편안하게 말씀해 주세요.</p>
+        <div class="icon">⚖️</div>
+        <h3>안녕하세요, 법률 상담사입니다</h3>
+        <p>민사, 형사, 노동, 계약, 가족법 등<br>법률 관련 궁금한 점을 질문해주세요.</p>
       </div>
     </div>
 
     <div class="typing-indicator" id="typingIndicator">
-      <div class="msg-avatar">🧠</div>
+      <div class="msg-avatar">⚖️</div>
       <div class="typing-dots">
         <span></span><span></span><span></span>
       </div>
@@ -297,7 +297,7 @@
     <div class="input-area">
       <textarea
         id="messageInput"
-        placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+        placeholder="법률 질문을 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
         rows="1"
       ></textarea>
       <button id="sendBtn" onclick="sendMessage()">➤</button>
@@ -322,7 +322,7 @@
       div.className = `message ${isUser ? 'user' : 'bot'}`;
 
       div.innerHTML = `
-        <div class="msg-avatar">${isUser ? '👤' : '🧠'}</div>
+        <div class="msg-avatar">${isUser ? '👤' : '⚖️'}</div>
         <div class="bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
       `;
 
@@ -385,8 +385,9 @@
       messagesEl.innerHTML = `
         <div class="welcome-message">
           <div class="icon">💬</div>
+          <div class="icon">⚖️</div>
           <h3>대화가 초기화되었습니다</h3>
-          <p>새로운 대화를 시작해보세요.</p>
+          <p>새로운 법률 상담을 시작해보세요.</p>
         </div>
       `;
     });
