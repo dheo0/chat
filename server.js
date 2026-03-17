@@ -1,17 +1,17 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 사용자별 대화 기록 저장
-const conversationHistory = new Map();
+// 사용자별 채팅 세션 저장
+const chatSessions = new Map();
 
 const SYSTEM_PROMPT = `당신은 전문적인 법률 상담사입니다.
 오직 법률과 관련된 질문에만 답변하며, 사용자가 법적 상황을 이해하고 적절한 조치를 취할 수 있도록 돕습니다.
@@ -27,45 +27,44 @@ const SYSTEM_PROMPT = `당신은 전문적인 법률 상담사입니다.
 
 app.use(express.static('public'));
 
+function createChatSession() {
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    systemInstruction: SYSTEM_PROMPT,
+  });
+  return model.startChat({ history: [] });
+}
+
 io.on('connection', (socket) => {
   console.log(`사용자 연결: ${socket.id}`);
-  conversationHistory.set(socket.id, []);
+  chatSessions.set(socket.id, createChatSession());
 
   socket.on('message', async (text) => {
-    const history = conversationHistory.get(socket.id) || [];
-    history.push({ role: 'user', content: text });
+    const chat = chatSessions.get(socket.id);
 
     try {
       socket.emit('typing', true);
 
-      const response = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages: history,
-      });
-
-      const reply = response.content[0].text;
-      history.push({ role: 'assistant', content: reply });
-      conversationHistory.set(socket.id, history);
+      const result = await chat.sendMessage(text);
+      const reply = result.response.text();
 
       socket.emit('typing', false);
       socket.emit('reply', reply);
     } catch (error) {
-      console.error('Claude API 오류:', error.message);
+      console.error('Gemini API 오류:', error.message);
       socket.emit('typing', false);
       socket.emit('error', '상담사 연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
     }
   });
 
   socket.on('reset', () => {
-    conversationHistory.set(socket.id, []);
+    chatSessions.set(socket.id, createChatSession());
     socket.emit('resetDone');
   });
 
   socket.on('disconnect', () => {
     console.log(`사용자 연결 종료: ${socket.id}`);
-    conversationHistory.delete(socket.id);
+    chatSessions.delete(socket.id);
   });
 });
 
