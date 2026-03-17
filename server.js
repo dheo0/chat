@@ -1,22 +1,22 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 require('dotenv').config();
+
+if (!process.env.GROQ_API_KEY) {
+  console.error('오류: GROQ_API_KEY 환경변수가 설정되지 않았습니다.');
+  process.exit(1);
+}
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-if (!process.env.GEMINI_API_KEY) {
-  console.error('오류: GEMINI_API_KEY 환경변수가 설정되지 않았습니다.');
-  process.exit(1);
-}
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// 사용자별 채팅 세션 저장
-const chatSessions = new Map();
+// 사용자별 채팅 히스토리 저장
+const chatHistories = new Map();
 
 const SYSTEM_PROMPT = `당신은 전문적인 법률 상담사입니다.
 오직 법률과 관련된 질문에만 답변하며, 사용자가 법적 상황을 이해하고 적절한 조치를 취할 수 있도록 돕습니다.
@@ -32,41 +32,44 @@ const SYSTEM_PROMPT = `당신은 전문적인 법률 상담사입니다.
 
 app.use(express.static('public'));
 
-function createChatSession() {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
-    systemInstruction: SYSTEM_PROMPT,
-  });
-  return model.startChat({ history: [] });
-}
-
 io.on('connection', (socket) => {
   console.log(`사용자 연결: ${socket.id}`);
-  chatSessions.set(socket.id, createChatSession());
+  chatHistories.set(socket.id, []);
 
   socket.on('message', async (text) => {
-    const chat = chatSessions.get(socket.id);
+    const history = chatHistories.get(socket.id);
+    history.push({ role: 'user', content: text });
 
     try {
       socket.emit('typing', true);
 
-      const result = await chat.sendMessage(text);
-      const reply = result.response.text();
+      const response = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...history,
+        ],
+        temperature: 0.7,
+        max_tokens: 1024,
+      });
+
+      const reply = response.choices[0].message.content;
+      history.push({ role: 'assistant', content: reply });
 
       socket.emit('typing', false);
       socket.emit('reply', reply);
     } catch (error) {
-      console.error('Gemini API 오류:', error.message);
-      console.error('상세:', JSON.stringify({ status: error.status, code: error.code, cause: String(error.cause) }));
+      console.error('Groq API 오류:', error.message);
+      console.error('상세:', JSON.stringify({ status: error.status, code: error.error?.code }));
       socket.emit('typing', false);
 
       let msg = '상담사 연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
-      if (error.message?.includes('API_KEY') || error.message?.includes('403') || error.message?.includes('401')) {
+      if (error.status === 401) {
         msg = 'API 키 인증에 실패했습니다. 서버 설정을 확인해주세요.';
-      } else if (error.message?.includes('fetch failed') || error.message?.includes('network') || error.message?.includes('ENOTFOUND')) {
-        msg = 'AI 서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.';
-      } else if (error.message?.includes('429') || error.message?.includes('quota')) {
+      } else if (error.status === 429) {
         msg = 'API 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error.message?.includes('fetch failed') || error.message?.includes('ENOTFOUND')) {
+        msg = 'AI 서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.';
       }
 
       socket.emit('error', msg);
@@ -74,13 +77,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('reset', () => {
-    chatSessions.set(socket.id, createChatSession());
+    chatHistories.set(socket.id, []);
     socket.emit('resetDone');
   });
 
   socket.on('disconnect', () => {
     console.log(`사용자 연결 종료: ${socket.id}`);
-    chatSessions.delete(socket.id);
+    chatHistories.delete(socket.id);
   });
 });
 
