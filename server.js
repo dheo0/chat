@@ -57,6 +57,7 @@ io.on('connection', (socket) => {
       socket.emit('reply', reply);
     } catch (error) {
       console.error('Gemini API 오류:', error.message);
+      console.error('상세:', JSON.stringify({ status: error.status, code: error.code, cause: String(error.cause) }));
       socket.emit('typing', false);
 
       let msg = '상담사 연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
