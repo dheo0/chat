@@ -2,15 +2,20 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>AI 법률 상담</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html, body {
+      height: 100%;
+    }
+
     body {
       font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
       background: #f2f2f7;
-      height: 100vh;
+      min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -27,13 +32,42 @@
       box-shadow: 0 4px 40px rgba(0,0,0,0.15);
     }
 
+    @media (max-width: 430px) {
+      body {
+        align-items: stretch;
+        background: #fff;
+      }
+      .chat-container {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        box-shadow: none;
+        border-radius: 0;
+      }
+    }
+
     /* 상단 바 */
     .top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 20px 8px;
+      padding: 16px 20px 12px;
+      padding-top: max(16px, env(safe-area-inset-top));
       background: #fff;
+      border-bottom: 1px solid #f0f0f0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .top-bar-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .top-bar button {
@@ -249,12 +283,17 @@
 
     /* 하단 입력바 */
     .input-area {
-      padding: 12px 16px 24px;
+      padding: 12px 16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
       background: #fff;
       display: flex;
       align-items: center;
       gap: 10px;
       border-top: 1px solid #f0f0f0;
+      flex-shrink: 0;
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
     }
 
     .menu-btn {
@@ -320,6 +359,7 @@
           <path d="M3.51 15a9 9 0 1 0 .49-4.95"></path>
         </svg>
       </button>
+      <div class="top-bar-title">⚖️ AI 법률상담사</div>
       <button onclick="window.close()" title="닫기">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
