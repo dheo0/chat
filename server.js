@@ -8,6 +8,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+if (!process.env.GEMINI_API_KEY) {
+  console.error('오류: GEMINI_API_KEY 환경변수가 설정되지 않았습니다.');
+  process.exit(1);
+}
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 사용자별 채팅 세션 저장
@@ -53,7 +58,17 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Gemini API 오류:', error.message);
       socket.emit('typing', false);
-      socket.emit('error', '상담사 연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+
+      let msg = '상담사 연결에 문제가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      if (error.message?.includes('API_KEY') || error.message?.includes('403') || error.message?.includes('401')) {
+        msg = 'API 키 인증에 실패했습니다. 서버 설정을 확인해주세요.';
+      } else if (error.message?.includes('fetch failed') || error.message?.includes('network') || error.message?.includes('ENOTFOUND')) {
+        msg = 'AI 서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.';
+      } else if (error.message?.includes('429') || error.message?.includes('quota')) {
+        msg = 'API 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요.';
+      }
+
+      socket.emit('error', msg);
     }
   });
 
